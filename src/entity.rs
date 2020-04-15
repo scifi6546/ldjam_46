@@ -1,7 +1,6 @@
 use crate::vector::*;
 use crate::controller::*;
 static TILE_SIZE: u32 = 20;
-
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum EntityTeam {
     Player,
@@ -82,8 +81,65 @@ impl Entity {
         self.state.dead
     }
 }
-
-pub trait Component: std::fmt::Debug {
+#[derive(Debug, Clone)]
+pub struct EntityGrid{
+    //first vec is a matrix of each tile point
+    grid:Vec<Vec<Entity>>,
+    width:usize,
+    height:usize,
+}
+impl EntityGrid{
+    pub fn new(width:usize,height:usize)->EntityGrid{
+        EntityGrid{
+            width:width,
+            height:height,
+            grid:vec![vec![];width as usize *height as usize],
+        }
+    }
+    pub fn add_entity(&mut self,entity:&Entity){
+        let index = self.get_index_vector(entity.get_position());
+        if index<self.grid.len(){
+            self.grid[index].push(entity.clone());
+        }
+    }
+    fn get_index(&self,x:usize,y:usize)->usize{
+        y*self.width+x
+    }
+    fn get_index_vector(&self,position:Vector2)->usize{
+        let x = i32::abs(position.x) as usize;
+        let y = i32::abs(position.y) as usize;
+        self.get_index(x,y)
+    }
+    pub fn add_entity_vec(&mut self,entity_vec:&Vec<Entity>){
+        for entity in entity_vec.iter(){
+            self.add_entity(&entity);
+        }
+    }
+    pub fn get_entities(&mut self,position:Vector2)->Vec<Entity>{
+        let index = self.get_index_vector(position);
+        if index<self.grid.len(){
+            self.grid[index].clone()
+        }else{
+            vec![]
+        }
+    }
+    pub fn get_entities_mut(&mut self,position:Vector2)->Option<&mut Vec<Entity>>{
+        let index = self.get_index_vector(position);
+        if index<self.grid.len(){
+            Some(&mut self.grid[index])
+        }else{
+            None
+        }
+    }
+    pub fn update_entity_position(&mut self){
+        let mut new_grid = EntityGrid::new(self.width, self.height);
+        for vec in self.grid.iter(){
+            new_grid.add_entity_vec(vec);
+        }
+        self.grid = new_grid.grid;
+    }
+}
+pub trait Component: std::fmt::Debug{
     fn process(
         &mut self,
         user_input: &Controller,
@@ -543,5 +599,47 @@ mod test {
             vec![InputComponent::new()],
         );
         let _e2 = e.clone();
+    }
+    #[test]
+    fn entity_grid_constructor(){
+        let e = EntityGrid::new(1,1);
+        assert_eq!(e.width,1);
+        assert_eq!(e.height,1);
+        assert_eq!(e.grid.len(),1);
+    }
+    #[test]
+    fn add_and_get_entity(){
+        let mut e = EntityGrid::new(2,2);
+        e.add_entity(&new_food(Vector2::new(0,0)));
+        e.add_entity(&new_food(Vector2::new(1,0)));
+        assert_eq!(e.get_entities(Vector2::new(0,0)).len(),1);
+        assert_eq!(e.get_entities(Vector2::new(1,0)).len(),1);
+        assert_eq!(e.get_entities(Vector2::new(1,1)).len(),0);
+    }
+    #[test]
+    fn add_entity_vec(){
+        let mut e = EntityGrid::new(2,2);
+        e.add_entity_vec(&vec![new_food(Vector2::new(0,0)),new_food(Vector2::new(0,0)),new_food(Vector2::new(0,1))]);
+        assert_eq!(e.get_entities(Vector2::new(0,0)).len(),2);
+        assert_eq!(e.get_entities(Vector2::new(0,1)).len(),1);
+    }
+    #[test]
+    fn get_entities_mut(){
+        let mut e = EntityGrid::new(1,1);
+        e.add_entity_vec(&vec![new_food(Vector2::new(0,0)),new_food(Vector2::new(0,0))]);
+        assert_eq!(e.get_entities_mut(Vector2::new(0,0)).unwrap().len(),2);
+    }
+    #[test]
+    fn update_position(){
+        let mut e = EntityGrid::new(2,2);
+        e.add_entity_vec(&vec![new_food(Vector2::new(0,0))]);
+        {
+            let e_vec = e.get_entities_mut(Vector2::new(0, 0)).unwrap();
+            e_vec[0].state.position=Vector2::new(1,1);
+            assert_eq!(e_vec[0].get_position(),Vector2::new(1, 1)); 
+        }
+        e.update_entity_position();
+        assert_eq!(e.get_entities(Vector2::new(0,0)).len(),0);
+        assert_eq!(e.get_entities(Vector2::new(1,1)).len(),1);
     }
 }
