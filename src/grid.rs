@@ -30,7 +30,11 @@ impl Grid {
         }
     }
     pub fn get_tile(&self, position: Vector2) -> Option<Tile> {
-        let index = (position.x as u32 * self.width + position.y as u32) as usize;
+        let index_signed  = position.x *self.width as i32 + position.y;
+        if index_signed<0{
+            return None
+        }
+        let index = i32::abs(index_signed) as usize;
         if index < self.tiles.len() {
             return Some(self.tiles[index].clone());
         }

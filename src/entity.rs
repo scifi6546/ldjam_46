@@ -360,8 +360,8 @@ impl Component for SteamComponent{
             self.time_since_last_last_rise=0;
         }
         if state.position.y<self.rain_height{
-            //state.dead=true;
-            vec![new_water_entity(state.position.clone())];
+            state.dead=true;
+            return vec![new_water_entity(state.position.clone())];
         }
         vec![]
     }
@@ -380,6 +380,8 @@ impl SteamComponent{
 }
 #[derive(Debug, Clone)]
 struct WaterComponent{
+    water_lifetime:u32,
+    time_lived:u32,
 }
 impl Component for WaterComponent{
     fn process(
@@ -389,16 +391,29 @@ impl Component for WaterComponent{
         _world: &crate::grid::Grid,
         entities: &Vec<Entity>,
     ) -> Vec<Entity> {
-        if WaterComponent::check_point(state.position.clone()+Vector2::new(0,-1), entities)==false{
-            state.delta_position=Vector2::new(0,-1);
+        self.time_lived+=1;
+        if WaterComponent::check_point(state.position.clone()+Vector2::new(0,-1), entities)==false && self.time_lived>self.water_lifetime{
+            state.dead=true;
+            return vec![new_steam_entity(state.position.clone()+Vector2::new(0,-1))]
+        }
+        if WaterComponent::check_point(state.position.clone()+Vector2::new(0,1), entities)==false{
+            state.delta_position=Vector2::new(0,1);
             return vec![]
         }
-        if WaterComponent::check_point(state.position.clone()+Vector2::new(1,-1), entities)==false{
-            state.delta_position=Vector2::new(1,-1);
+        if WaterComponent::check_point(state.position.clone()+Vector2::new(1,1), entities)==false{
+            state.delta_position=Vector2::new(1,1);
             return vec![]
         }
-        if WaterComponent::check_point(state.position.clone()+Vector2::new(-1,-1), entities)==false{
-            state.delta_position=Vector2::new(-1,-1);
+        if WaterComponent::check_point(state.position.clone()+Vector2::new(-1,1), entities)==false{
+            state.delta_position=Vector2::new(-1,1);
+            return vec![]
+        }
+        if WaterComponent::check_point(state.position.clone()+Vector2::new(-1,0), entities)==false{
+            state.delta_position=Vector2::new(-1,0);
+            return vec![]
+        }
+        if WaterComponent::check_point(state.position.clone()+Vector2::new(1,0), entities)==false{
+            state.delta_position=Vector2::new(1,0);
             return vec![]
         }
 
@@ -409,8 +424,10 @@ impl Component for WaterComponent{
     }
 }
 impl WaterComponent{
-    pub fn new()->Box<dyn Component>{
+    pub fn new(water_lifetime:u32)->Box<dyn Component>{
         Box::new(WaterComponent{
+            water_lifetime:water_lifetime,
+            time_lived:0,
         })
     }
     fn check_point(pos:Vector2,entities:&Vec<Entity>)->bool{
@@ -423,7 +440,7 @@ impl WaterComponent{
     }
 }
 pub fn new_water_entity(position:Vector2)->Entity{
-    Entity::new(position, 1, 1, 0x0042ff, EntityTeam::Food, vec![WaterComponent::new(),GridComponent::new()])
+    Entity::new(position, 1, 1, 0x0042ff, EntityTeam::Food, vec![WaterComponent::new(300),GridComponent::new()])
 }
 pub fn new_steam_entity(position:Vector2)->Entity{
     Entity::new(position, 1, 1, 0xc2fffc, EntityTeam::Food, vec![SteamComponent::new(40,5),GridComponent::new()])
