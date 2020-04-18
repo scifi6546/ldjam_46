@@ -11,6 +11,7 @@ mod entity;
 use entity::*;
 mod controller;
 use controller::*;
+mod spawn;
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 #[allow(dead_code)]
@@ -20,15 +21,24 @@ use grid::*;
 #[wasm_bindgen]
 pub struct State {
     entities: Vec<Entity>,
+    spawners: Vec<Box<dyn spawn::SpawnComponent>>,
     grid: Grid,
 }
 #[wasm_bindgen]
 impl State {
     pub fn process(&mut self, input: Controller) {
+        for spawn in self.spawners.iter_mut(){
+            self.entities.append(&mut spawn.process());
+        }
         let old_entities = &self.entities.clone();
         let mut new_entities = vec![];
+
         for entity in self.entities.iter_mut() {
-            new_entities.append(&mut entity.process(&input, &self.grid, old_entities));
+            for ent in entity.process(&input, &self.grid, old_entities).iter(){
+                if self.grid.in_range(ent.get_position()){
+                    new_entities.push(ent.clone());
+                }
+            }
         }
         self.entities.append(&mut new_entities);
         self.kill_dead();
@@ -81,7 +91,7 @@ fn new_cursor(position: Vector2) -> Entity {
         vec![
             entity::InputComponent::new(),
             entity::GridComponent::new(),
-            entity::SpawnComponent::new(10,new_steam_entity),
+            entity::SpawnComponent::new(10,new_fire_entity),
         ],
     )
 }
@@ -126,9 +136,11 @@ pub fn init_state() -> State {
     State {
         entities: vec![
             new_cursor(Vector2::new(2, 3)),
-            new_snake_entity(Vector2::new(16, 29)),
+            new_plant_entity(Vector2::new(16, 29)),
+            new_bug_entity(Vector2::new(3,29))
         ],
         grid: Grid::new(32, 32, map),
+        spawners: vec![spawn::BugSpawner::new()]
     }
 }
 #[wasm_bindgen]

@@ -7,6 +7,8 @@ pub enum EntityTeam {
     Enemy,
     Food,
     Snake,
+    Fire,
+    Bug,
 }
 #[derive(Debug, Clone)]
 pub struct Entity {
@@ -495,11 +497,154 @@ impl WaterComponent{
         return false;
     }
 }
+#[derive(Debug, Clone)]
+struct PlantComponent{
+    time_since_last_last_grow:u64,
+    grow_time:u64,
+    done_growing:bool
+}
+impl Component for PlantComponent{
+    fn process(
+        &mut self,
+        _user_input: &Controller,
+        state: &mut EntityState,
+        _world: &crate::grid::Grid,
+        entities: &Vec<Entity>,
+    ) -> Vec<Entity> {
+        self.time_since_last_last_grow+=1;
+        for ent in entities.iter(){
+            if ent.state.team==EntityTeam::Bug && state.position.within_one_of(&ent.get_position()){
+               state.dead=true;
+               return vec![] 
+            }
+        }
+        if self.time_since_last_last_grow>self.grow_time && self.done_growing == false{
+            self.time_since_last_last_grow=0;
+            self.done_growing=true;
+            vec![new_plant_entity(state.position.clone()+Vector2::new(0,-1))]
+        }else{
+            vec![]
+        }
+    }
+    fn box_clone(&self) -> Box<dyn Component> {
+        Box::new((*self).clone())
+    }
+}
+impl PlantComponent{
+    pub fn new(grow_time:u64)->Box<dyn Component>{
+        Box::new(PlantComponent{
+            time_since_last_last_grow:0,
+            grow_time:grow_time,
+            done_growing:false,
+        })
+    }
+}
+#[derive(Debug, Clone)]
+struct FireComponent{
+    time_since_last_last_expand:u64,
+    grow_time:u64,
+    growing_countdown:u32,
+    time_alive:u32,
+}
+impl Component for FireComponent{
+    fn process(
+        &mut self,
+        _user_input: &Controller,
+        state: &mut EntityState,
+        _world: &crate::grid::Grid,
+        _entities: &Vec<Entity>,
+    ) -> Vec<Entity> {
+        self.time_since_last_last_expand+=1;
+        self.time_alive+=1;
+        if self.time_alive>100{
+            state.dead=true;
+        }
+        if self.time_since_last_last_expand>self.grow_time && self.growing_countdown>0{
+            self.time_since_last_last_expand=0;
+            let growing_countdown = self.growing_countdown;
+            self.growing_countdown=0;
+            vec![new_fire_entity_countdown(state.position.clone()+Vector2::new(0,-1),growing_countdown-1),
+            new_fire_entity_countdown(state.position.clone()+Vector2::new(0, 1),growing_countdown-1),
+            new_fire_entity_countdown(state.position.clone()+Vector2::new(1, 0),growing_countdown-1),
+            new_fire_entity_countdown(state.position.clone()+Vector2::new(-1,0),growing_countdown-1)]
+        }else{
+            vec![]
+        }
+    }
+    fn box_clone(&self) -> Box<dyn Component> {
+        Box::new((*self).clone())
+    }
+}
+impl FireComponent{
+    pub fn new(grow_time:u64,countdown:u32)->Box<dyn Component>{
+        Box::new(FireComponent{
+            time_alive:0,
+            time_since_last_last_expand:0,
+            grow_time:grow_time,
+            
+            growing_countdown:countdown,
+        })
+    }
+}
+#[derive(Debug, Clone)]
+struct BugComponent{
+    time_since_last_last_expand:u64,
+    grow_time:u64,
+}
+impl Component for BugComponent{
+    fn process(
+        &mut self,
+        _user_input: &Controller,
+        state: &mut EntityState,
+        _world: &crate::grid::Grid,
+        entities: &Vec<Entity>,
+    ) -> Vec<Entity> {
+        self.time_since_last_last_expand+=1;
+        for ent in entities.iter(){
+            if ent.state.team==EntityTeam::Fire && state.position.within_one_of(&ent.get_position()){
+               state.dead=true;
+               return vec![] 
+            }
+        }
+        if self.time_since_last_last_expand>self.grow_time{
+            self.time_since_last_last_expand=0;
+            state.delta_position+=Vector2::new(1, 0);
+            vec![]
+        }else{
+            vec![]
+        }
+    }
+    fn box_clone(&self) -> Box<dyn Component> {
+        Box::new((*self).clone())
+    }
+}
+impl BugComponent{
+    pub fn new(grow_time:u64)->Box<dyn Component>{
+        Box::new(BugComponent{
+            time_since_last_last_expand:0,
+            grow_time:grow_time,
+        })
+    }
+}
+pub fn new_bug_entity(position:Vector2)->Entity{
+    Entity::new(position, 1, 1, 0x00ffff, EntityTeam::Bug, vec![BugComponent::new(80),GridComponent::new()])
+}
+pub fn new_fire_entity_countdown(position:Vector2,countdown:u32)->Entity{
+    Entity::new(position, 1, 1, 0xff0000, EntityTeam::Fire, vec![FireComponent::new(15,countdown),GridComponent::new()])
+
+}
+pub fn new_fire_entity(position:Vector2)->Entity{
+    Entity::new(position, 1, 1, 0xff0000, EntityTeam::Food, vec![FireComponent::new(15,3),GridComponent::new()])
+
+}
 pub fn new_water_entity(position:Vector2)->Entity{
     Entity::new(position, 1, 1, 0x0042ff, EntityTeam::Food, vec![WaterComponent::new(300),GridComponent::new()])
 }
 pub fn new_steam_entity(position:Vector2)->Entity{
     Entity::new(position, 1, 1, 0xc2fffc, EntityTeam::Food, vec![SteamComponent::new(40,5),GridComponent::new()])
+}
+pub fn new_plant_entity(position:Vector2)->Entity{
+    Entity::new(position, 1, 1, 0x00aa00, EntityTeam::Food, vec![PlantComponent::new(40),GridComponent::new()])
 }
 pub fn new_snake_entity(position: Vector2) -> Entity {
     Entity::new(

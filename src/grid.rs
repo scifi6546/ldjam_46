@@ -40,6 +40,13 @@ impl Grid {
         }
         None
     }
+    pub fn in_range(&self,position: Vector2)->bool{
+        if position.x>=0 && position.x<self.width as i32 && position.y>=0 && position.y<self.height as i32{
+            return true;
+        }else{
+            return false;
+        }
+    }
     pub fn draw(&self) -> Vec<u32> {
         let mut out: Vec<u32> = vec![];
         for y in 0..self.height {
