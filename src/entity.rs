@@ -9,6 +9,7 @@ pub enum EntityTeam {
     Snake,
     Fire,
     Bug,
+    Plant,
 }
 #[derive(Debug, Clone)]
 pub struct Entity {
@@ -560,7 +561,7 @@ impl Component for FireComponent{
     ) -> Vec<Entity> {
         self.time_since_last_last_expand+=1;
         self.time_alive+=1;
-        if self.time_alive>100{
+        if self.time_alive>20{
             state.dead=true;
         }
         if self.time_since_last_last_expand>self.grow_time && self.growing_countdown>0{
@@ -591,6 +592,34 @@ impl FireComponent{
     }
 }
 #[derive(Debug, Clone)]
+struct FireDamageComponent{
+}
+impl Component for FireDamageComponent{
+    fn process(
+        &mut self,
+        _user_input: &Controller,
+        state: &mut EntityState,
+        _world: &crate::grid::Grid,
+        entities: &Vec<Entity>,
+    ) -> Vec<Entity> {
+        for ent in entities.iter(){
+            if ent.state.team==EntityTeam::Fire && state.position.within_one_of(&ent.get_position()){
+               state.dead=true;
+               return vec![] 
+            }
+        }
+        vec![]
+    }
+    fn box_clone(&self) -> Box<dyn Component> {
+        Box::new((*self).clone())
+    }
+}
+impl FireDamageComponent{
+    pub fn new()->Box<dyn Component>{
+        Box::new(FireDamageComponent{})
+    }
+}
+#[derive(Debug, Clone)]
 struct BugComponent{
     time_since_last_last_expand:u64,
     grow_time:u64,
@@ -604,11 +633,8 @@ impl Component for BugComponent{
         entities: &Vec<Entity>,
     ) -> Vec<Entity> {
         self.time_since_last_last_expand+=1;
-        for ent in entities.iter(){
-            if ent.state.team==EntityTeam::Fire && state.position.within_one_of(&ent.get_position()){
-               state.dead=true;
-               return vec![] 
-            }
+        if state.position.x==31{
+           state.dead=true; 
         }
         if self.time_since_last_last_expand>self.grow_time{
             self.time_since_last_last_expand=0;
@@ -631,14 +657,14 @@ impl BugComponent{
     }
 }
 pub fn new_bug_entity(position:Vector2)->Entity{
-    Entity::new(position, 1, 1, 0x00ffff, EntityTeam::Bug, vec![BugComponent::new(80),GridComponent::new()])
+    Entity::new(position, 1, 1, 0x00ffff, EntityTeam::Bug, vec![FireDamageComponent::new(),BugComponent::new(80),GridComponent::new()])
 }
 pub fn new_fire_entity_countdown(position:Vector2,countdown:u32)->Entity{
     Entity::new(position, 1, 1, 0xff0000, EntityTeam::Fire, vec![FireComponent::new(15,countdown),GridComponent::new()])
 
 }
 pub fn new_fire_entity(position:Vector2)->Entity{
-    Entity::new(position, 1, 1, 0xff0000, EntityTeam::Food, vec![FireComponent::new(15,3),GridComponent::new()])
+    Entity::new(position, 1, 1, 0xff0000, EntityTeam::Food, vec![FireComponent::new(8,3),GridComponent::new()])
 
 }
 pub fn new_water_entity(position:Vector2)->Entity{
@@ -648,7 +674,7 @@ pub fn new_steam_entity(position:Vector2)->Entity{
     Entity::new(position, 1, 1, 0xc2fffc, EntityTeam::Food, vec![SteamComponent::new(40,5),GridComponent::new()])
 }
 pub fn new_plant_entity(position:Vector2)->Entity{
-    Entity::new(position, 1, 1, 0x00aa00, EntityTeam::Food, vec![PlantComponent::new(40),GridComponent::new()])
+    Entity::new(position, 1, 1, 0x00aa00, EntityTeam::Plant, vec![FireDamageComponent::new(),PlantComponent::new(40),GridComponent::new()])
 }
 pub fn new_snake_entity(position: Vector2) -> Entity {
     Entity::new(
