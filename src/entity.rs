@@ -193,12 +193,13 @@ impl Component for GridComponent {
             if tile != crate::grid::Tile::Glass {
                 let mut no_entity_found = true;
                 let new_pos = state.position.clone()+state.delta_position.clone();
+
                 for entitity in entities.iter(){
                     if entitity.get_position()==new_pos{
                         no_entity_found=false;
                     }
                 }
-                if no_entity_found{
+                if no_entity_found && world.in_range(new_pos){
                     state.position += state.delta_position.clone();
                 }
             }

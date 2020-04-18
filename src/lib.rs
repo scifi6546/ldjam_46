@@ -123,16 +123,16 @@ fn new_prize(position: Vector2) -> Entity {
 }
 
 pub fn init_state() -> State {
-    let mut map = vec![];
-    for y in 0..32 {
-        for x in 0..32 {
-            if x < 2 || x > 29 || y > 29 {
-                map.push(Tile::Glass);
-            } else {
-                map.push(Tile::Background);
-            }
-        }
-    }
+    let mut map = vec![Tile::Background;32*32];
+    //for y in 0..32 {
+    //    for x in 0..32 {
+    //        if x < 2 || x > 29 || y > 29 {
+    //            map.push(Tile::Glass);
+    //        } else {
+    //            map.push(Tile::Background);
+    //        }
+    //    }
+    //}
     State {
         entities: vec![
             new_cursor(Vector2::new(2, 3)),
