@@ -4,6 +4,7 @@ pub enum StateCommand{
     Push(Box<dyn State>),
     Pop,
 }
+
 pub trait State{
     fn game_loop(&mut self, input: Controller) -> (Vec<u32>, StateCommand) {
         let res = self.process(input);

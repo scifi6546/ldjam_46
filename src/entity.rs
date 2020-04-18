@@ -82,6 +82,9 @@ impl Entity {
     pub fn get_dead(&self)->bool{
         self.state.dead
     }
+    pub fn get_team(&self)->EntityTeam{
+        self.state.team.clone()
+    }
 }
 #[derive(Debug, Clone)]
 pub struct EntityGrid{

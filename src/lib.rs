@@ -21,7 +21,8 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 static TILE_SIZE: u32 = 20;
 mod grid;
 use grid::*;
-
+mod state_observer;
+use state_observer::*;
 #[wasm_bindgen]
 pub struct StateStack{
     states:Vec<Box<dyn State>>
@@ -56,6 +57,7 @@ pub struct PlayState {
     entities: Vec<Entity>,
     spawners: Vec<Box<dyn spawn::SpawnComponent>>,
     grid: Grid,
+    observers: Vec<Box<dyn StateObserver>>,
 }
 #[wasm_bindgen]
 impl PlayState {
@@ -75,6 +77,12 @@ impl PlayState {
         }
         self.entities.append(&mut new_entities);
         self.kill_dead();
+        for observer in self.observers.iter_mut(){
+            let (cont,command) = observer.process(&self.entities);
+            if cont{
+                return command
+            }
+        }
         StateCommand::NoAction
     }
     pub fn draw(&self) -> Vec<u32> {
@@ -172,7 +180,8 @@ pub fn init_state() -> StateStack {
             new_bug_entity(Vector2::new(3,29))
         ],
         grid: Grid::new(32, 32, map),
-        spawners: vec![spawn::BugSpawner::new()]
+        spawners: vec![spawn::BugSpawner::new()],
+        observers:vec![BugWatcher::new()]
     };
     StateStack::new(vec![Box::new(state)])
 }
