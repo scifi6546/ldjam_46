@@ -23,6 +23,7 @@ pub struct Grid {
 
 impl Grid {
     pub fn new(width: u32, height: u32, tiles: Vec<Tile>) -> Grid {
+        assert_eq!(width*height,tiles.len() as u32);
         Grid {
             tiles: tiles,
             width: width,
