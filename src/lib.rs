@@ -12,27 +12,18 @@ use entity::*;
 mod controller;
 use controller::*;
 mod spawn;
+mod loose_state;
+mod state;
+use state::*;
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 #[allow(dead_code)]
 static TILE_SIZE: u32 = 20;
 mod grid;
 use grid::*;
-pub enum StateCommand{
-    NoAction,
-    Push(Box<dyn State>),
-    Pop,
-}
-trait State{
-    fn game_loop(&mut self, input: Controller) -> (Vec<u32>, StateCommand) {
-        let res = self.process(input);
-        (self.draw(),res)
-    }
-    fn draw(&self) -> Vec<u32>;
-    fn process(&mut self, input: Controller)->StateCommand;
-}
+
 #[wasm_bindgen]
-struct StateStack{
+pub struct StateStack{
     states:Vec<Box<dyn State>>
 }
 #[wasm_bindgen]
@@ -53,6 +44,11 @@ impl StateStack{
         )
         .ok()
         .unwrap()
+    }
+    fn new(states:Vec<Box<dyn State>>)->StateStack{
+        StateStack{
+            states:states
+        }
     }
 }
 #[wasm_bindgen]
@@ -167,9 +163,9 @@ fn new_prize(position: Vector2) -> Entity {
     )
 }
 
-pub fn init_state() -> PlayState {
+pub fn init_state() -> StateStack {
     let mut map = vec![Tile::Background;32*32];
-    PlayState {
+    let state = PlayState {
         entities: vec![
             new_cursor(Vector2::new(2, 3)),
             new_plant_entity(Vector2::new(16, 29)),
@@ -177,10 +173,11 @@ pub fn init_state() -> PlayState {
         ],
         grid: Grid::new(32, 32, map),
         spawners: vec![spawn::BugSpawner::new()]
-    }
+    };
+    StateStack::new(vec![Box::new(state)])
 }
 #[wasm_bindgen]
-pub fn init_state_js() -> PlayState {
+pub fn init_state_js() -> StateStack {
     init_state()
 }
 #[cfg(test)]
@@ -203,11 +200,6 @@ mod tests {
     #[test]
     fn test_init_state() {
         init_state();
-    }
-    #[test]
-    fn draw_state() {
-        let s = init_state();
-        s.draw();
     }
     #[test]
     fn run_frame() {
