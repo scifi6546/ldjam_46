@@ -18,15 +18,52 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 static TILE_SIZE: u32 = 20;
 mod grid;
 use grid::*;
+pub enum StateCommand{
+    NoAction,
+    Push(Box<dyn State>),
+    Pop,
+}
+trait State{
+    fn game_loop(&mut self, input: Controller) -> (Vec<u32>, StateCommand) {
+        let res = self.process(input);
+        (self.draw(),res)
+    }
+    fn draw(&self) -> Vec<u32>;
+    fn process(&mut self, input: Controller)->StateCommand;
+}
 #[wasm_bindgen]
-pub struct State {
+struct StateStack{
+    states:Vec<Box<dyn State>>
+}
+#[wasm_bindgen]
+impl StateStack{
+    pub fn game_loop(&mut self, input: Controller)->Vec<u32>{
+        let len = self.states.len()-1;
+        let (draw,command) = self.states[len].game_loop(input);
+        match command{
+            StateCommand::NoAction=>(),
+            StateCommand::Push(state)=>self.states.push(state),
+            StateCommand::Pop=>{self.states.pop();},
+        };
+        draw
+    }
+    pub fn game_loop_js(&mut self, input: JsValue) -> JsValue {
+        serde_wasm_bindgen::to_value(
+            &self.game_loop(serde_wasm_bindgen::from_value(input).ok().unwrap()),
+        )
+        .ok()
+        .unwrap()
+    }
+}
+#[wasm_bindgen]
+pub struct PlayState {
     entities: Vec<Entity>,
     spawners: Vec<Box<dyn spawn::SpawnComponent>>,
     grid: Grid,
 }
 #[wasm_bindgen]
-impl State {
-    pub fn process(&mut self, input: Controller) {
+impl PlayState {
+    fn process(&mut self, input: Controller)->StateCommand{
         for spawn in self.spawners.iter_mut(){
             self.entities.append(&mut spawn.process());
         }
@@ -42,6 +79,7 @@ impl State {
         }
         self.entities.append(&mut new_entities);
         self.kill_dead();
+        StateCommand::NoAction
     }
     pub fn draw(&self) -> Vec<u32> {
         let mut draws = self.grid.draw();
@@ -75,9 +113,16 @@ impl State {
         &self.entities
     }
 }
-
+impl State for PlayState{
+    fn process(&mut self, input: Controller)->StateCommand{
+        self.process(input)
+    }
+    fn draw(&self)->Vec<u32>{
+        self.draw()
+    }
+}
 pub struct MainOutput {
-    pub state: State,
+    pub state: PlayState,
     pub draw_calls: Vec<u32>,
 }
 
@@ -122,18 +167,9 @@ fn new_prize(position: Vector2) -> Entity {
     )
 }
 
-pub fn init_state() -> State {
+pub fn init_state() -> PlayState {
     let mut map = vec![Tile::Background;32*32];
-    //for y in 0..32 {
-    //    for x in 0..32 {
-    //        if x < 2 || x > 29 || y > 29 {
-    //            map.push(Tile::Glass);
-    //        } else {
-    //            map.push(Tile::Background);
-    //        }
-    //    }
-    //}
-    State {
+    PlayState {
         entities: vec![
             new_cursor(Vector2::new(2, 3)),
             new_plant_entity(Vector2::new(16, 29)),
@@ -144,7 +180,7 @@ pub fn init_state() -> State {
     }
 }
 #[wasm_bindgen]
-pub fn init_state_js() -> State {
+pub fn init_state_js() -> PlayState {
     init_state()
 }
 #[cfg(test)]
