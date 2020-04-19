@@ -1,10 +1,36 @@
 <!doctype html>
 <html>
  <head>
-   <title>Care'n Snek</title>
+   <title>Angry Aphid</title>
  </head>
- <body>
-    <canvas id="canvas" height="800px" width="800px"></canvas>
+ <body class="gamebox">
+   <div class="title"><div>Angry Aphid</div> </div>
+    <canvas id="canvas" height="640px" width="640px"></canvas>
     <script src="index.js"></script>
+    <div>
+    Controls: WASD for movement, space to burn aphids. Defend sprout in order to survive. 
+  </div>
  </body>
 </html>
+<style>
+  .gamebox{
+    margin:auto;
+    text-align:center;
+    background-color:#64e4ff
+  }
+  #canvas{
+    margin:auto;
+    background-color:rgb(255, 0, 0)
+  }
+  .title{
+    background-color: #ff6d41;
+    width:6cm;
+    height:1cm;
+    text-align: center;
+    font-size: large;
+    margin:auto;
+    padding: .3cm;
+    border-radius: 25px;
+    vertical-align: middle;
+  }
+</style>

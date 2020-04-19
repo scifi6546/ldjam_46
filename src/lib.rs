@@ -176,8 +176,7 @@ pub fn init_state() -> StateStack {
     let state = PlayState {
         entities: vec![
             new_cursor(Vector2::new(2, 3)),
-            new_plant_entity(Vector2::new(16, 29)),
-            new_bug_entity(Vector2::new(3,29))
+            new_plant_entity(Vector2::new(16, 31)),
         ],
         grid: Grid::new(32, 32, map),
         spawners: vec![spawn::BugSpawner::new()],

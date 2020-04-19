@@ -517,11 +517,22 @@ impl Component for PlantComponent{
         entities: &Vec<Entity>,
     ) -> Vec<Entity> {
         self.time_since_last_last_grow+=1;
+        let mut plant_found = true;
+        let mut num_plants = 0;
         for ent in entities.iter(){
             if ent.state.team==EntityTeam::Bug && state.position.within_one_of(&ent.get_position()){
                state.dead=true;
                return vec![] 
             }
+            if ent.state.team==EntityTeam::Plant {
+                num_plants+=1;
+                if state.position.within_one_of(&ent.get_position()){
+                    plant_found = false;
+                }
+            }
+        }
+        if num_plants<10{
+            self.done_growing=plant_found;
         }
         if self.time_since_last_last_grow>self.grow_time && self.done_growing == false{
             self.time_since_last_last_grow=0;
